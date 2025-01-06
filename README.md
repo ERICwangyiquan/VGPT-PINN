@@ -4,8 +4,18 @@ We propose a Viscosity-enhanced Generative Pre-Trained Physics-Informed Neural N
 # Paper Links:
 [arXiv](http://arxiv.org/abs/2501.01587) | [ResearchGate](https://www.researchgate.net/publication/387745006_VGPT-PINN_Viscosity-enhanced_Generative_PreTrained_Physics_Informed_Neural_Networks_for_parameterized_nonlinear_conservation_laws)
 
-# VGPT-PINN Architecture
+# VGPT-PINN Architecture:
 ![image](https://github.com/DuktigYajie/VGPT-PINN/blob/main/VGPT-PINN%20Schematic.png)
+
+# Related Work:
+Transformed Generative Pre-Trained Physics-Informed Neural Networks (TGPT-PINN), a framework that extends Physics-Informed Neural Networks (PINNs) and reduced basis methods (RBM) to the non- linear model reduction regime while maintaining the type of network structure and the unsupervised nature of its learning. 
+
+Paper Links:
+[CMAME:TGPT-PINN: Nonlinear model reduction with transformed GPT-PINNs](https://www.sciencedirect.com/science/article/abs/pii/S0045782524004547)
+
+Talk/Presentation:
+[YouTube](https://www.youtube.com/watch?v=ODA9Po4FVWA)
+
 
 # Citation:
 Below you can find the Bibtex citation:
