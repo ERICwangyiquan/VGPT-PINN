@@ -1,7 +1,8 @@
 # VGPT-PINN：Viscosity-enhanced Generative Pre-Trained Physics Informed Neural Networks for parameterized nonlinear conservation laws
 We propose a Viscosity-enhanced Generative Pre-Trained Physics-Informed Neural Network with a transform layer (VGPT-PINN) for solving parameterized nonlinear conservation laws. The VGPT-PINN extends the traditional physics-informed neural networks and its recently proposed generative pre-trained strategy for linear model reduction to nonlinear model reduction and shock-capturing domains. By utilizing an adaptive meta-network, a simultaneously trained transform layer, viscosity enhancement strategies, implementable shock interaction analysis, and a separable training process, the VGPT-PINN efficiently captures complex parameter-dependent shock formations and interactions.  Numerical results of VGPT-PINN applied to the families of inviscid Burgers' equation and the Euler equations, parameterized by their initial conditions, demonstrate the robustness and accuracy of the proposed technique. It accurately solves for the viscosity solution via very few neurons without leveraging any {\it a priori} knowledge of the equations or its initial condition. 
 
-Paper Links: http://arxiv.org/abs/2501.01587
+Paper Links:
+[arXiv](http://arxiv.org/abs/2501.01587) | [ResearchGate](https://www.researchgate.net/publication/387745006_VGPT-PINN_Viscosity-enhanced_Generative_PreTrained_Physics_Informed_Neural_Networks_for_parameterized_nonlinear_conservation_laws)
 
 
 # Citation:
