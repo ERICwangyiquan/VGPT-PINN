@@ -28,3 +28,6 @@ Below you can find the Bibtex citation:
 &nbsp;&nbsp;&nbsp;year={2025}<br>
 }
 </blockquote>
+
+# Comments：
+Typically, you can directly run the xxx_PINN.ipynb file to generate the full PINN network and save it, then run the xxx_VGPT.ipynb code. If you want to use an existing xxx.pkl file to directly test the VGPT-PINN results, you need to rename the XXX_VGPT_activation.py file to XXX_GPT_activation.py and import XXX_GPT_activation in the XXXX_VGPT.ipynb file. If you have any further questions, feel free to contact me at jiyajie595@sjtu.edu.cn.
