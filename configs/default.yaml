@@ -1,0 +1,33 @@
+geometry:
+  L_tot: 1.0
+  L_charge: 0.2
+
+time:
+  T_end: 0.05
+  dt_vis: 0.0005
+
+sampling:
+  N_bc: 200
+  N_ic: 200
+  N_f: 2000
+
+physics:
+  gamma: 1.4
+
+ic:
+  left: {rho: 1.0, u: 0.0, p: 1.0}
+  right: {rho: 0.125, u: 0.0, p: 0.1}
+
+loss:
+  w_pde: 1.0
+  w_ic: 1.0
+  w_bc: 1.0
+
+model:
+  mlp_hidden: [128, 128, 128, 128]
+  activation: tanh
+
+train:
+  optimizer: adam
+  lr: 0.001
+  epochs: 1000
