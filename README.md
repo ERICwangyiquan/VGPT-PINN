@@ -31,3 +31,15 @@ Below you can find the Bibtex citation:
 
 # Comments：
 Typically, you can directly run the xxx_PINN.ipynb file to generate the full PINN network and save it, then run the xxx_VGPT.ipynb code. If you want to use an existing xxx.pkl file to directly test the VGPT-PINN results, you need to rename the XXX_VGPT_activation.py file to XXX_GPT_activation.py and import XXX_GPT_activation in the XXXX_VGPT.ipynb file. If you have any further questions, feel free to contact me at jiyajie595@sjtu.edu.cn.
+
+## 1D explosive wave PINN
+
+A minimal physics-informed neural network example for the one-dimensional Euler equations is provided under the `pinn/` and `scripts/` directories. The configuration file `configs/default.yaml` specifies geometry, sampling and training hyperparameters.
+
+To train the network using the default settings run
+
+```
+python scripts/train.py --config configs/default.yaml
+```
+
+The current example implements the baseline without source terms or transform layers and serves as a starting point for further development.
