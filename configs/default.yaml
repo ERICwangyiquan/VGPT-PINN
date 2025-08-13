@@ -14,6 +14,12 @@ sampling:
 physics:
   gamma: 1.4
 
+  eos: JWL
+  jwl_params: {A: 3.712e11, B: 3.230e9, R1: 4.15, R2: 1.1, omega: 0.35}
+  use_progress_var: true
+  arrhenius_params: {A: 4.0e19, Ea: 1.0e5, Rgas: 8.314, n: 1.0, Q: 4.0e6, Cv: 1000.0}
+
+
 ic:
   left: {rho: 1.0, u: 0.0, p: 1.0}
   right: {rho: 0.125, u: 0.0, p: 0.1}
@@ -31,3 +37,7 @@ train:
   optimizer: adam
   lr: 0.001
   epochs: 1000
+  save_path: model.pth
+
+evaluation:
+  x_obs: 0.5

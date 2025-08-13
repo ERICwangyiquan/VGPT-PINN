@@ -2,13 +2,17 @@ import torch
 import torch.autograd as autograd
 import torch.nn.functional as F
 
+from .eos_jwl import jwl_pressure
+from .source_terms import arrhenius_rate, energy_source
 
-def euler_residual(model, xt, gamma=1.4):
-    """Compute residuals of 1D Euler equations without source terms."""
+
+def euler_residual(model, xt, cfg):
+    """Compute residuals of 1D Euler equations with JWL EOS and source terms."""
     xt = xt.requires_grad_(True)
     pred = model(xt)
-    rho, u, p = pred[:, 0:1], pred[:, 1:2], pred[:, 2:3]
-    E = p / (gamma - 1.0) + 0.5 * rho * u ** 2
+    rho, u, E, lam = pred[:, 0:1], pred[:, 1:2], pred[:, 2:3], pred[:, 3:4]
+
+    p = jwl_pressure(rho, u, E, cfg["physics"].get("jwl_params", {}))
 
     grad_rho = autograd.grad(rho, xt, torch.ones_like(rho), create_graph=True)[0]
     rho_x, rho_t = grad_rho[:, 0:1], grad_rho[:, 1:2]
@@ -28,15 +32,21 @@ def euler_residual(model, xt, gamma=1.4):
     grad_energy_flux = autograd.grad(energy_flux, xt, torch.ones_like(energy_flux), create_graph=True)[0]
     energy_flux_x = grad_energy_flux[:, 0:1]
 
+    grad_lam = autograd.grad(lam, xt, torch.ones_like(lam), create_graph=True)[0]
+    lam_t = grad_lam[:, 1:2]
+    rate = arrhenius_rate(rho, u, E, lam, xt, cfg)
+    S = energy_source(rho, u, E, lam, xt, cfg)
+
     mass_res = rho_t + rho_u_x
     mom_res = rho_u_t + mom_flux_x
-    energy_res = E_t + energy_flux_x
-    return mass_res, mom_res, energy_res
+    energy_res = E_t + energy_flux_x - S
+    lambda_res = lam_t - rate
+    return mass_res, mom_res, energy_res, lambda_res
 
 
-def pde_loss(model, xt, gamma=1.4):
-    mass, mom, energy = euler_residual(model, xt, gamma)
-    return (mass ** 2).mean() + (mom ** 2).mean() + (energy ** 2).mean()
+def pde_loss(model, xt, cfg):
+    mass, mom, energy, lam = euler_residual(model, xt, cfg)
+    return (mass ** 2).mean() + (mom ** 2).mean() + (energy ** 2).mean() + (lam ** 2).mean()
 
 
 def ic_loss(model, xt, true_u):

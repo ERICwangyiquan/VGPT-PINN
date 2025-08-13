@@ -34,7 +34,10 @@ Typically, you can directly run the xxx_PINN.ipynb file to generate the full PIN
 
 ## 1D explosive wave PINN
 
-A minimal physics-informed neural network example for the one-dimensional Euler equations is provided under the `pinn/` and `scripts/` directories. The configuration file `configs/default.yaml` specifies geometry, sampling and training hyperparameters.
+
+A minimal physics-informed neural network example for the one-dimensional Euler equations is provided under the `pinn/` and `scripts/` directories. The configuration file `configs/default.yaml` specifies geometry, sampling, physics parameters and training hyperparameters.
+
+The M2 milestone integrates a JWL equation of state, Arrhenius reaction source term and a progress variable \(\lambda\) describing explosive burnup. The model now outputs `[rho, u, E, lambda]` and enforces energy consistency through a source term.
 
 To train the network using the default settings run
 
@@ -42,4 +45,11 @@ To train the network using the default settings run
 python scripts/train.py --config configs/default.yaml
 ```
 
-The current example implements the baseline without source terms or transform layers and serves as a starting point for further development.
+
+After training, generate a time history at a chosen observation point and a coarse full-field snapshot grid with
+
+```
+python scripts/eval.py --config configs/default.yaml --model model.pth
+```
+
+Outputs are written to the `outputs/` directory.
