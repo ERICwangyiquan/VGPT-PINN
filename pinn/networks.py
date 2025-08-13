@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 class Sine(nn.Module):
     def forward(self, x):
@@ -41,4 +42,9 @@ class MLP(nn.Module):
         self.model = nn.Sequential(*layers)
 
     def forward(self, x):
-        return self.model(x)
+        raw = self.model(x)
+        raw_rho, u, raw_E, raw_lam = raw[:, 0:1], raw[:, 1:2], raw[:, 2:3], raw[:, 3:4]
+        rho = F.softplus(raw_rho)
+        E = F.softplus(raw_E)
+        lam = torch.sigmoid(raw_lam)
+        return torch.cat([rho, u, E, lam], dim=1)

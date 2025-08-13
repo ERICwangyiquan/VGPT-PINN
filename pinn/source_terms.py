@@ -13,7 +13,9 @@ def arrhenius_rate(rho, u, E, lam, xt, cfg):
     # Specific internal energy and temperature approximation
     e = E - 0.5 * rho * u ** 2
     T = e / (rho * Cv + 1e-12)
-    rate = A * torch.exp(-Ea / (Rgas * (T + 1e-12))) * (1 - lam) ** n
+    T = torch.clamp(T, min=1.0)
+    exp_arg = torch.clamp(-Ea / (Rgas * (T + 1e-12)), max=50.0)
+    rate = A * torch.exp(exp_arg) * (1 - lam.clamp(min=0.0, max=1.0)) ** n
     chi = (x <= Lc).float()
     return rate * chi
 
