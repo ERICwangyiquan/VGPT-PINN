@@ -31,6 +31,7 @@ def train(cfg, device=None):
         opt.step()
         if (ep + 1) % 100 == 0:
             print(f"Epoch {ep+1}/{epochs}: loss={loss.item():.4e}")
+            
     save_path = cfg["train"].get("save_path")
     if save_path:
         torch.save(model.state_dict(), save_path)

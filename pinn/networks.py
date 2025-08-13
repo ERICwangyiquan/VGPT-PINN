@@ -11,6 +11,7 @@ ACTIVATIONS = {
     "swish": nn.SiLU,
     "sine": Sine,
 }
+
 class MLP(nn.Module):
     """Simple fully-connected network mapping (x,t) -> flow variables."""
 
