@@ -30,6 +30,7 @@ loss:
   w_shock: 0.5
   w_rh: 0.5
 
+
 model:
   mlp_hidden: [128, 128, 128, 128]
   activation: tanh

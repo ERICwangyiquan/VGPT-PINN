@@ -82,7 +82,6 @@ def rh_loss(model, xt, cfg, eps=1e-3):
         + (energy_flux_l - energy_flux_r) ** 2
     ).mean()
 
-
 def ic_loss(model, xt, true_u):
     pred = model(xt)
     return F.mse_loss(pred, true_u)
