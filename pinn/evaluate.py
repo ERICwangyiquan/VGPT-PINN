@@ -64,22 +64,22 @@ def evaluate(model, cfg, device=None, out_dir="outputs"):
     shock_pos = []
     for j in range(nt):
         r = rho_t[:, j]
-        mask = r < rho_mid
+        # Ignore the boundary point at x=0 which can lead to
+        # spurious detections of the shock when the model predicts
+        # a low density at the wall.
+        mask = r[1:] < rho_mid
         idx = torch.nonzero(mask, as_tuple=False)
         if idx.numel() == 0:
             shock_pos.append(float("nan"))
             continue
-        i = idx[0].item()
-        if i == 0:
-            shock_pos.append(xs[0].item())
+        i = idx[0].item() + 1  # offset due to ignoring first point
+        x0, x1 = xs[i - 1], xs[i]
+        r0, r1 = r[i - 1], r[i]
+        if r1 == r0:
+            x = x0
         else:
-            x0, x1 = xs[i - 1], xs[i]
-            r0, r1 = r[i - 1], r[i]
-            if r1 == r0:
-                shock_pos.append(x0.item())
-            else:
-                x = x0 + (rho_mid - r0) * (x1 - x0) / (r1 - r0)
-                shock_pos.append(x.item())
+            x = x0 + (rho_mid - r0) * (x1 - x0) / (r1 - r0)
+        shock_pos.append(x.item())
     shock_x = torch.tensor(shock_pos, dtype=xs.dtype)
     traj = torch.stack([ts, shock_x], dim=1).cpu().numpy()
     np.savetxt(
