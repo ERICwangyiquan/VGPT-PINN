@@ -97,3 +97,4 @@ def rh_loss(model, xt, cfg):
         + (mom_flux_l - mom_flux_r) ** 2
         + (energy_flux_l - energy_flux_r) ** 2
     ).mean()
+

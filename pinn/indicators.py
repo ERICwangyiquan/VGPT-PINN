@@ -1,7 +1,6 @@
 import torch
 import torch.autograd as autograd
 
-
 def shock_indicator(model, xt):
     """Gradient-based shock indicator.
 
