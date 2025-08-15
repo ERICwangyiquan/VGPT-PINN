@@ -31,3 +31,23 @@ Below you can find the Bibtex citation:
 
 # Comments：
 Typically, you can directly run the xxx_PINN.ipynb file to generate the full PINN network and save it, then run the xxx_VGPT.ipynb code. If you want to use an existing xxx.pkl file to directly test the VGPT-PINN results, you need to rename the XXX_VGPT_activation.py file to XXX_GPT_activation.py and import XXX_GPT_activation in the XXXX_VGPT.ipynb file. If you have any further questions, feel free to contact me at jiyajie595@sjtu.edu.cn.
+
+## 1D explosive wave PINN
+
+A minimal physics-informed neural network example for the one-dimensional Euler equations is provided under the `pinn/` and `scripts/` directories. The configuration file `configs/default.yaml` specifies geometry, sampling, physics parameters and training hyperparameters.
+
+The M2 milestone integrates a JWL equation of state, Arrhenius reaction source term and a progress variable \(\lambda\) describing explosive burnup. The model now outputs `[rho, u, E, lambda]` and enforces energy consistency through a source term.
+
+To train the network using the default settings run
+
+```
+python scripts/train.py --config configs/default.yaml
+```
+
+After training, generate a time history at a chosen observation point and a coarse full-field snapshot grid with
+
+```
+python scripts/eval.py --config configs/default.yaml --model model.pth
+```
+
+Outputs are written to the `outputs/` directory.
