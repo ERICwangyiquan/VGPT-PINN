@@ -22,15 +22,17 @@ def evaluate(model, cfg, device=None, out_dir="outputs"):
     X, Tm = torch.meshgrid(xs, ts, indexing="ij")
     xt = torch.stack([X.reshape(-1), Tm.reshape(-1)], dim=1).to(device)
 
-    with torch.no_grad():
-        pred = model(xt)
+    xt = xt.requires_grad_(True)
+    pred = model(xt)
+    ind = shock_indicator(model, xt)
     rho, u, E, lam = [pred[:, i:i+1] for i in range(4)]
     p = jwl_pressure(rho, u, E, cfg["physics"].get("jwl_params", {}))
 
     nx, nt = X.shape
-    rho = rho.cpu().numpy().reshape(nx, nt)
-    u = u.cpu().numpy().reshape(nx, nt)
-    p = p.cpu().numpy().reshape(nx, nt)
+    rho = rho.detach().cpu().numpy().reshape(nx, nt)
+    u = u.detach().cpu().numpy().reshape(nx, nt)
+    p = p.detach().cpu().numpy().reshape(nx, nt)
+    ind = torch.nan_to_num(ind.detach(), nan=0.0).view(nx, nt)
 
     os.makedirs(out_dir, exist_ok=True)
     # Time history at observation point
@@ -53,23 +55,17 @@ def evaluate(model, cfg, device=None, out_dir="outputs"):
     plt.savefig(os.path.join(out_dir, "pressure_field.png"))
     plt.close()
 
-    # Shock trajectory based on indicator maximum
-    traj = []
-    for ti in ts:
-        t_line = torch.full_like(xs, ti)
-        xt_line = torch.stack([xs, t_line], dim=1).to(device)
-        with torch.enable_grad():
-            ind = shock_indicator(model, xt_line)
-        idx = torch.argmax(ind).item()
-        traj.append([ti.item(), xs[idx].item()])
-    traj = np.array(traj)
-    np.savetxt(os.path.join(out_dir, "shock_trajectory.csv"), traj, delimiter=",", header="t,x", comments="")
+    # Shock trajectory
+    idx = torch.argmax(ind, dim=0)
+    shock_x = xs[idx].cpu().numpy()
+    traj = np.stack([ts.cpu().numpy(), shock_x], axis=1)
+    np.savetxt(os.path.join(out_dir, "shock_traj.csv"), traj, delimiter=",", header="t,x_shock", comments="")
     plt.figure()
-    plt.plot(traj[:, 0], traj[:, 1])
+    plt.plot(ts.cpu().numpy(), shock_x)
     plt.xlabel("t")
-    plt.ylabel("shock x")
+    plt.ylabel("shock position")
     plt.tight_layout()
-    plt.savefig(os.path.join(out_dir, "shock_trajectory.png"))
+    plt.savefig(os.path.join(out_dir, "shock_traj.png"))
     plt.close()
 
     return {"rho": rho, "u": u, "p": p}

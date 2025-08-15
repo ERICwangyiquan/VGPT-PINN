@@ -9,7 +9,7 @@ from .indicators import shock_indicator
 
 def euler_residual(model, xt, cfg):
     """Compute residuals of 1D Euler equations with JWL EOS and source terms."""
-    xt = xt.clone().detach().requires_grad_(True)
+    xt = xt.requires_grad_(True)
     pred = model(xt)
     rho, u, E, lam = pred[:, 0:1], pred[:, 1:2], pred[:, 2:3], pred[:, 3:4]
 
@@ -50,38 +50,22 @@ def pde_loss(model, xt, cfg):
     return (mass ** 2).mean() + (mom ** 2).mean() + (energy ** 2).mean() + (lam ** 2).mean()
 
 
-def ic_loss(model, xt, true_u):
-    pred = model(xt)
-    return F.mse_loss(pred, true_u)
-
-
-def bc_loss(model, xt, true_u):
-    pred = model(xt)
-    return F.mse_loss(pred, true_u)
-
-
 def shock_loss(model, xt, cfg):
-    """Additional loss emphasizing PDE residual near shocks."""
-    mass, mom, energy, _ = euler_residual(model, xt, cfg)
-    w = shock_indicator(model, xt)
-    return (w * (mass**2 + mom**2 + energy**2)).mean()
+    mass, mom, energy, lam = euler_residual(model, xt, cfg)
+    weight = shock_indicator(model, xt)
+    weight = weight / (weight.max() + 1e-8)
+    res = mass ** 2 + mom ** 2 + energy ** 2 + lam ** 2
+    return (weight * res).mean()
 
 
-def rh_loss(model, xt, cfg):
-    """Rankine–Hugoniot jump-condition loss at shock locations."""
-    w = shock_indicator(model, xt).squeeze()
-    thresh = cfg["loss"].get("rh_threshold", 0.0)
-    mask = w > thresh
-    if mask.sum() == 0:
-        return torch.tensor(0.0, device=xt.device)
-    xt_shock = xt[mask]
-    eps = cfg["loss"].get("rh_epsilon", 1e-3)
-    left = xt_shock.clone()
-    right = xt_shock.clone()
-    left[:, 0] = (left[:, 0] - eps).clamp(min=0.0)
-    right[:, 0] = right[:, 0] + eps
-    pred_l = model(left)
-    pred_r = model(right)
+def rh_loss(model, xt, cfg, eps=1e-3):
+    L = cfg["geometry"]["L_tot"]
+    xt_l = xt.clone()
+    xt_r = xt.clone()
+    xt_l[:, 0] = torch.clamp(xt_l[:, 0] - eps, 0.0, L)
+    xt_r[:, 0] = torch.clamp(xt_r[:, 0] + eps, 0.0, L)
+    pred_l = model(xt_l)
+    pred_r = model(xt_r)
     rho_l, u_l, E_l = pred_l[:, 0:1], pred_l[:, 1:2], pred_l[:, 2:3]
     rho_r, u_r, E_r = pred_r[:, 0:1], pred_r[:, 1:2], pred_r[:, 2:3]
     p_l = jwl_pressure(rho_l, u_l, E_l, cfg["physics"].get("jwl_params", {}))
@@ -97,4 +81,14 @@ def rh_loss(model, xt, cfg):
         + (mom_flux_l - mom_flux_r) ** 2
         + (energy_flux_l - energy_flux_r) ** 2
     ).mean()
+
+
+def ic_loss(model, xt, true_u):
+    pred = model(xt)
+    return F.mse_loss(pred, true_u)
+
+
+def bc_loss(model, xt, true_u):
+    pred = model(xt)
+    return F.mse_loss(pred, true_u)
 

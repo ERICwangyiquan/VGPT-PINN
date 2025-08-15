@@ -53,29 +53,20 @@ def sample_residual(cfg):
     return torch.cat([x, t], dim=1)
 
 
-def sample_residual_adaptive(model, cfg):
-    """Sample residual points with shock-focused resampling."""
-    N = cfg["sampling"]["N_f"]
+def resample_shock_points(model, cfg):
+    N = cfg["sampling"].get("N_shock", 0)
+    if N <= 0:
+        return None
+    device = next(model.parameters()).device
     L = cfg["geometry"]["L_tot"]
     T = cfg["time"]["T_end"]
-    over = int(N * cfg["sampling"].get("oversample", 5))
-    x = torch.rand(over, 1) * L
-    t = torch.rand(over, 1) * T
+    N_candidates = N * 5
+    x = torch.rand(N_candidates, 1, device=device) * L
+    t = torch.rand(N_candidates, 1, device=device) * T
     xt = torch.cat([x, t], dim=1)
-    with torch.enable_grad():
-        w = shock_indicator(model, xt).squeeze().detach()
-    k = int(N * cfg["sampling"].get("shock_fraction", 0.3))
-    if k <= 0:
-        return xt[:N]
-    idx = torch.topk(w, k).indices
-    xt_shock = xt[idx]
-    remain = N - k
-    if remain > 0:
-        x2 = torch.rand(remain, 1) * L
-        t2 = torch.rand(remain, 1) * T
-        xt2 = torch.cat([x2, t2], dim=1)
-        return torch.cat([xt_shock, xt2], dim=0)
-    return xt_shock
+    ind = shock_indicator(model, xt).detach().squeeze()
+    topk = torch.topk(ind, k=N, largest=True).indices
+    return xt[topk].detach()
 
 
 def sample_training_points(cfg):
