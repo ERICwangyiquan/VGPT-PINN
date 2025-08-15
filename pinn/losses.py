@@ -4,6 +4,7 @@ import torch.nn.functional as F
 
 from .eos_jwl import jwl_pressure
 from .source_terms import arrhenius_rate, energy_source
+from .indicators import shock_indicator
 
 
 def euler_residual(model, xt, cfg):
@@ -48,6 +49,38 @@ def pde_loss(model, xt, cfg):
     mass, mom, energy, lam = euler_residual(model, xt, cfg)
     return (mass ** 2).mean() + (mom ** 2).mean() + (energy ** 2).mean() + (lam ** 2).mean()
 
+
+def shock_loss(model, xt, cfg):
+    mass, mom, energy, lam = euler_residual(model, xt, cfg)
+    weight = shock_indicator(model, xt)
+    weight = weight / (weight.max() + 1e-8)
+    res = mass ** 2 + mom ** 2 + energy ** 2 + lam ** 2
+    return (weight * res).mean()
+
+
+def rh_loss(model, xt, cfg, eps=1e-3):
+    L = cfg["geometry"]["L_tot"]
+    xt_l = xt.clone()
+    xt_r = xt.clone()
+    xt_l[:, 0] = torch.clamp(xt_l[:, 0] - eps, 0.0, L)
+    xt_r[:, 0] = torch.clamp(xt_r[:, 0] + eps, 0.0, L)
+    pred_l = model(xt_l)
+    pred_r = model(xt_r)
+    rho_l, u_l, E_l = pred_l[:, 0:1], pred_l[:, 1:2], pred_l[:, 2:3]
+    rho_r, u_r, E_r = pred_r[:, 0:1], pred_r[:, 1:2], pred_r[:, 2:3]
+    p_l = jwl_pressure(rho_l, u_l, E_l, cfg["physics"].get("jwl_params", {}))
+    p_r = jwl_pressure(rho_r, u_r, E_r, cfg["physics"].get("jwl_params", {}))
+    mass_flux_l = rho_l * u_l
+    mass_flux_r = rho_r * u_r
+    mom_flux_l = rho_l * u_l ** 2 + p_l
+    mom_flux_r = rho_r * u_r ** 2 + p_r
+    energy_flux_l = u_l * (E_l + p_l)
+    energy_flux_r = u_r * (E_r + p_r)
+    return (
+        (mass_flux_l - mass_flux_r) ** 2
+        + (mom_flux_l - mom_flux_r) ** 2
+        + (energy_flux_l - energy_flux_r) ** 2
+    ).mean()
 
 def ic_loss(model, xt, true_u):
     pred = model(xt)

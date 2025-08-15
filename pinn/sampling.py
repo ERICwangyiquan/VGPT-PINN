@@ -1,4 +1,5 @@
 import torch
+from .indicators import shock_indicator
 
 
 def sample_initial(cfg):
@@ -50,6 +51,22 @@ def sample_residual(cfg):
     x = torch.rand(N, 1) * L
     t = torch.rand(N, 1) * T
     return torch.cat([x, t], dim=1)
+
+
+def resample_shock_points(model, cfg):
+    N = cfg["sampling"].get("N_shock", 0)
+    if N <= 0:
+        return None
+    device = next(model.parameters()).device
+    L = cfg["geometry"]["L_tot"]
+    T = cfg["time"]["T_end"]
+    N_candidates = N * 5
+    x = torch.rand(N_candidates, 1, device=device) * L
+    t = torch.rand(N_candidates, 1, device=device) * T
+    xt = torch.cat([x, t], dim=1)
+    ind = shock_indicator(model, xt).detach().squeeze()
+    topk = torch.topk(ind, k=N, largest=True).indices
+    return xt[topk].detach()
 
 
 def sample_training_points(cfg):

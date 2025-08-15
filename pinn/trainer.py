@@ -1,6 +1,6 @@
 import torch
 from .networks import MLP
-from .losses import pde_loss, ic_loss, bc_loss
+from .losses import pde_loss, ic_loss, bc_loss, shock_loss, rh_loss
 from . import sampling
 
 
@@ -22,10 +22,19 @@ def train(cfg, device=None):
         bc_left = bc_loss(model, data["bc_left_xt"], data["bc_left_u"])
         bc_right = bc_loss(model, data["bc_right_xt"], data["bc_right_u"])
         loss_bc = bc_left + bc_right
+        shock_xt = sampling.resample_shock_points(model, cfg)
+        if shock_xt is not None:
+            loss_shock = shock_loss(model, shock_xt, cfg)
+            loss_rh = rh_loss(model, shock_xt, cfg)
+        else:
+            loss_shock = torch.tensor(0.0, device=device)
+            loss_rh = torch.tensor(0.0, device=device)
         loss = (
             cfg["loss"]["w_pde"] * loss_pde
             + cfg["loss"]["w_ic"] * loss_ic
             + cfg["loss"]["w_bc"] * loss_bc
+            + cfg["loss"].get("w_shock", 0.0) * loss_shock
+            + cfg["loss"].get("w_rh", 0.0) * loss_rh
         )
         loss.backward()
         opt.step()
