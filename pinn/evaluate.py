@@ -57,16 +57,29 @@ def evaluate(model, cfg, device=None, out_dir="outputs"):
     plt.close()
 
     # Shock trajectory
-    val, idx = ind.max(dim=0)
-    shock_x = torch.where(val > 0, xs[idx], torch.full_like(val, float("nan")))
+    # Exclude boundary points when searching for the shock to avoid a
+    # spurious maximum at x=0 causing the trajectory to be reported as zero
+    # for all times.  We slice off the first and last spatial locations and
+    # offset the resulting indices accordingly.
+    ind_inner = ind[1:-1, :]
+    val, idx = ind_inner.max(dim=0)
+    shock_x = torch.where(
+        val > 0, xs[1:-1][idx], torch.full_like(val, float("nan"))
+    )
     traj = torch.stack([ts, shock_x], dim=1).cpu().numpy()
-    np.savetxt(os.path.join(out_dir, "shock_traj.csv"), traj, delimiter=",", header="t,x_shock", comments="")
+    np.savetxt(
+        os.path.join(out_dir, "shock_trajectory.csv"),
+        traj,
+        delimiter=",",
+        header="t,x_shock",
+        comments="",
+    )
     plt.figure()
     plt.plot(ts.cpu().numpy(), shock_x.cpu().numpy())
     plt.xlabel("t")
     plt.ylabel("shock position")
     plt.tight_layout()
-    plt.savefig(os.path.join(out_dir, "shock_traj.png"))
+    plt.savefig(os.path.join(out_dir, "shock_trajectory.png"))
     plt.close()
 
     return {"rho": rho, "u": u, "p": p}
