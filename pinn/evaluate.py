@@ -4,7 +4,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from .eos_jwl import jwl_pressure
-from .indicators import shock_indicator
 
 
 def evaluate(model, cfg, device=None, out_dir="outputs"):
@@ -22,18 +21,16 @@ def evaluate(model, cfg, device=None, out_dir="outputs"):
     X, Tm = torch.meshgrid(xs, ts, indexing="ij")
     xt = torch.stack([X.reshape(-1), Tm.reshape(-1)], dim=1).to(device)
 
-    xt = xt.requires_grad_(True)
-    pred = model(xt)
-    ind = shock_indicator(model, xt)
+    with torch.no_grad():
+        pred = model(xt)
     rho, u, E, lam = [pred[:, i:i+1] for i in range(4)]
     p = jwl_pressure(rho, u, E, cfg["physics"].get("jwl_params", {}))
 
     nx, nt = X.shape
-    rho = rho.detach().cpu().numpy().reshape(nx, nt)
+    rho_t = rho.detach().view(nx, nt).cpu()
+    rho = rho_t.numpy()
     u = u.detach().cpu().numpy().reshape(nx, nt)
     p = p.detach().cpu().numpy().reshape(nx, nt)
-    # Clamp NaN/Inf values in the indicator to avoid argmax returning index 0
-    ind = torch.nan_to_num(ind.detach(), nan=0.0, posinf=0.0, neginf=0.0).view(nx, nt)
 
     os.makedirs(out_dir, exist_ok=True)
     # Time history at observation point
@@ -56,17 +53,48 @@ def evaluate(model, cfg, device=None, out_dir="outputs"):
     plt.savefig(os.path.join(out_dir, "pressure_field.png"))
     plt.close()
 
-    # Shock trajectory
-    val, idx = ind.max(dim=0)
-    shock_x = torch.where(val > 0, xs[idx], torch.full_like(val, float("nan")))
+    # Shock trajectory computed as the first crossing of the midpoint
+    # density between the left and right states.  This avoids spurious
+    # maxima of gradient-based indicators that can pin the shock to a
+    # single location.
+    rho_left = cfg["ic"]["left"]["rho"]
+    rho_right = cfg["ic"]["right"]["rho"]
+    rho_mid = 0.5 * (rho_left + rho_right)
+
+    shock_pos = []
+    for j in range(nt):
+        r = rho_t[:, j]
+        mask = r < rho_mid
+        idx = torch.nonzero(mask, as_tuple=False)
+        if idx.numel() == 0:
+            shock_pos.append(float("nan"))
+            continue
+        i = idx[0].item()
+        if i == 0:
+            shock_pos.append(xs[0].item())
+        else:
+            x0, x1 = xs[i - 1], xs[i]
+            r0, r1 = r[i - 1], r[i]
+            if r1 == r0:
+                shock_pos.append(x0.item())
+            else:
+                x = x0 + (rho_mid - r0) * (x1 - x0) / (r1 - r0)
+                shock_pos.append(x.item())
+    shock_x = torch.tensor(shock_pos, dtype=xs.dtype)
     traj = torch.stack([ts, shock_x], dim=1).cpu().numpy()
-    np.savetxt(os.path.join(out_dir, "shock_traj.csv"), traj, delimiter=",", header="t,x_shock", comments="")
+    np.savetxt(
+        os.path.join(out_dir, "shock_trajectory.csv"),
+        traj,
+        delimiter=",",
+        header="t,x_shock",
+        comments="",
+    )
     plt.figure()
     plt.plot(ts.cpu().numpy(), shock_x.cpu().numpy())
     plt.xlabel("t")
     plt.ylabel("shock position")
     plt.tight_layout()
-    plt.savefig(os.path.join(out_dir, "shock_traj.png"))
+    plt.savefig(os.path.join(out_dir, "shock_trajectory.png"))
     plt.close()
 
     return {"rho": rho, "u": u, "p": p}
