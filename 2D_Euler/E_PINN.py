@@ -7,6 +7,23 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 def gradients(outputs, inputs):
     return torch.autograd.grad(outputs, inputs,grad_outputs=torch.ones_like(outputs), create_graph=True)
 
+def source_term(state):
+    """Source term :math:`s(u)` for the Euler equations.
+
+    The default implementation returns zeros so that the original
+    homogeneous system is recovered. Users can modify this function to
+    introduce problem-specific source terms.
+
+    Args:
+        state (torch.Tensor): Tensor containing the conservative variables
+            ``[rho, p, u, v]``.
+
+    Returns:
+        torch.Tensor: Tensor of the same shape as ``state`` representing the
+        source contribution for each equation.
+    """
+    return torch.zeros_like(state)
+
 
 class NN(nn.Module):    
     def __init__(self, nu,layers, gamma):
@@ -102,7 +119,11 @@ class NN(nn.Module):
         gamma = 1.4                                                   
         epsilon = 1e-5
         rho,p,u,v = y[:, 0:1], y[:, 1:2], y[:, 2:3],y[:,3:]
-        
+
+        # Source terms for each conservation equation
+        src = source_term(torch.cat([rho, p, u, v], dim=1))
+        s1, s2, s3, s4 = src[:, 0:1], src[:, 1:2], src[:, 2:3], src[:, 3:4]
+
         rhoE = p/(gamma - 1) +0.5*rho*(u**2+v**2)
         
         f1 = rho*u
@@ -153,10 +174,10 @@ class NN(nn.Module):
         
         lam = 0.1*nab + 1
         
-        f = (((U1_t + f1_x+g1_y )/lam)**2).mean() +\
-            (((U2_t + f2_x+g2_y )/lam)**2).mean() +\
-            (((U3_t + f3_x+g3_y )/lam)**2).mean() +\
-            (((U4_t + f4_x+g4_y )/lam)**2).mean()
+        f = (((U1_t + f1_x + g1_y - s1)/lam)**2).mean() +\
+            (((U2_t + f2_x + g2_y - s2)/lam)**2).mean() +\
+            (((U3_t + f3_x + g3_y - s3)/lam)**2).mean() +\
+            (((U4_t + f4_x + g4_y - s4)/lam)**2).mean()
 
         return f
 

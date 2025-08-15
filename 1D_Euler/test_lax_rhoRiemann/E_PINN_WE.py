@@ -10,6 +10,18 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 def gradients(outputs, inputs):
     return torch.autograd.grad(outputs, inputs,grad_outputs=torch.ones_like(outputs), create_graph=True)
 
+def source_term(state):
+    """Source term :math:`s(u)` for the 1D Euler system.
+
+    Args:
+        state (torch.Tensor): Tensor with components ``[rho, p, u]``.
+
+    Returns:
+        torch.Tensor: Source contribution for each conservation equation.
+        Defaults to zeros, yielding the homogeneous Euler equations.
+    """
+    return torch.zeros_like(state)
+
 class PINNs_WE_Euler_1D(nn.Module):  
     def __init__(self,Nl,Nn):
         super(PINNs_WE_Euler_1D, self).__init__()
@@ -27,14 +39,17 @@ class PINNs_WE_Euler_1D(nn.Module):
         return a
     
     def loss_pde(self, x):
-        y = self.forward(x)                                                
+        y = self.forward(x)
         rho,p,u = y[:, 0:1], y[:, 1:2], y[:, 2:]
         #rho,p,u = y[0], y[1], y[2]
-        
-        
+
+        # Source terms
+        src = source_term(torch.cat([rho, p, u], dim=1))
+        s1, s2, s3 = src[:, 0:1], src[:, 1:2], src[:, 2:]
+
         U2 = rho*u
         U3 = 0.5*rho*u**2 + p/0.4
-        
+
         #F1 = U2
         F2 = rho*u**2+p
         F3 = u*(U3 + p)
@@ -68,23 +83,26 @@ class PINNs_WE_Euler_1D(nn.Module):
         eta = (torch.clamp(abs(u_x)-(u_x)-1,min=0)*torch.clamp(abs(p_x)-(p_x)-1,min=0)).detach()
         d = 1/(eta*(abs(u_x)-(u_x) )+1)
      
-        f = ((d*(rho_t + U2_x))**2).mean() + \
-            ((d*(U2_t  + F2_x))**2).mean() + \
-            ((d*(U3_t  + F3_x))**2).mean() #+\
+        f = ((d*(rho_t + U2_x - s1))**2).mean() + \
+            ((d*(U2_t  + F2_x - s2))**2).mean() + \
+            ((d*(U3_t  + F3_x - s3))**2).mean() #+\
             #((rho_t).mean())**2 +\
-            #((U3_t).mean())**2 
+            #((U3_t).mean())**2
     
         return f
 
     def loss_pde2(self, x):
-        y = self.forward(x)                                                
+        y = self.forward(x)
         rho,p,u = y[:, 0:1], y[:, 1:2], y[:, 2:]
         #rho,p,u = y[0], y[1], y[2]
-        
-        
+
+        # Source terms
+        src = source_term(torch.cat([rho, p, u], dim=1))
+        s1, s2, s3 = src[:, 0:1], src[:, 1:2], src[:, 2:]
+
         U2 = rho*u
         U3 = 0.5*rho*u**2 + p/0.4
-        
+
         #F1 = U2
         F2 = rho*u**2+p
         F3 = u*(U3 + p)
@@ -116,11 +134,11 @@ class PINNs_WE_Euler_1D(nn.Module):
 
         d = (1/(0.2*(abs(u_x)-(u_x) )+1))
      
-        f = ((d*(rho_t + U2_x))**2).mean() + \
-            ((d*(U2_t  + F2_x))**2).mean() + \
-            ((d*(U3_t  + F3_x))**2).mean() #+\
+        f = ((d*(rho_t + U2_x - s1))**2).mean() + \
+            ((d*(U2_t  + F2_x - s2))**2).mean() + \
+            ((d*(U3_t  + F3_x - s3))**2).mean() #+\
             #((rho_t).mean())**2 +\
-            #((U3_t).mean())**2 
+            #((U3_t).mean())**2
     
         return f
 
