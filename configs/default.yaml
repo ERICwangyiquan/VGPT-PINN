@@ -1,0 +1,49 @@
+geometry:
+  L_tot: 1.0
+  L_charge: 0.2
+
+time:
+  T_end: 0.05
+  dt_vis: 0.0005
+
+sampling:
+  N_bc: 200
+  N_ic: 200
+  N_f: 2000
+  adaptive: true
+  resample_freq: 200
+  oversample: 5
+  shock_fraction: 0.3
+
+physics:
+  gamma: 1.4
+  eos: JWL
+  jwl_params: {A: 3.712e11, B: 3.230e9, R1: 4.15, R2: 1.1, omega: 0.35}
+  use_progress_var: true
+  arrhenius_params: {A: 4.0e19, Ea: 1.0e5, Rgas: 8.314, n: 1.0, Q: 4.0e6, Cv: 1000.0}
+
+ic:
+  left: {rho: 1.0, u: 0.0, p: 1.0}
+  right: {rho: 0.125, u: 0.0, p: 0.1}
+
+loss:
+  w_pde: 1.0
+  w_ic: 1.0
+  w_bc: 1.0
+  w_shock: 0.5
+  w_rh: 0.5
+  rh_epsilon: 1.0e-3
+  rh_threshold: 5.0
+
+model:
+  mlp_hidden: [128, 128, 128, 128]
+  activation: tanh
+
+train:
+  optimizer: adam
+  lr: 0.001
+  epochs: 1000
+  save_path: model.pth
+
+evaluation:
+  x_obs: 0.5
