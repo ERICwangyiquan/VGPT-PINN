@@ -10,7 +10,10 @@ sampling:
   N_bc: 200
   N_ic: 200
   N_f: 2000
-  N_shock: 500
+  adaptive: true
+  resample_freq: 200
+  oversample: 5
+  shock_fraction: 0.3
 
 physics:
   gamma: 1.4
@@ -29,7 +32,8 @@ loss:
   w_bc: 1.0
   w_shock: 0.5
   w_rh: 0.5
-
+  rh_epsilon: 1.0e-3
+  rh_threshold: 5.0
 
 model:
   mlp_hidden: [128, 128, 128, 128]
