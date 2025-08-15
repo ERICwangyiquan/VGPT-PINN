@@ -32,7 +32,8 @@ def evaluate(model, cfg, device=None, out_dir="outputs"):
     rho = rho.detach().cpu().numpy().reshape(nx, nt)
     u = u.detach().cpu().numpy().reshape(nx, nt)
     p = p.detach().cpu().numpy().reshape(nx, nt)
-    ind = torch.nan_to_num(ind.detach(), nan=0.0).view(nx, nt)
+    # Clamp NaN/Inf values in the indicator to avoid argmax returning index 0
+    ind = torch.nan_to_num(ind.detach(), nan=0.0, posinf=0.0, neginf=0.0).view(nx, nt)
 
     os.makedirs(out_dir, exist_ok=True)
     # Time history at observation point
@@ -56,12 +57,12 @@ def evaluate(model, cfg, device=None, out_dir="outputs"):
     plt.close()
 
     # Shock trajectory
-    idx = torch.argmax(ind, dim=0)
-    shock_x = xs[idx].cpu().numpy()
-    traj = np.stack([ts.cpu().numpy(), shock_x], axis=1)
+    val, idx = ind.max(dim=0)
+    shock_x = torch.where(val > 0, xs[idx], torch.full_like(val, float("nan")))
+    traj = torch.stack([ts, shock_x], dim=1).cpu().numpy()
     np.savetxt(os.path.join(out_dir, "shock_traj.csv"), traj, delimiter=",", header="t,x_shock", comments="")
     plt.figure()
-    plt.plot(ts.cpu().numpy(), shock_x)
+    plt.plot(ts.cpu().numpy(), shock_x.cpu().numpy())
     plt.xlabel("t")
     plt.ylabel("shock position")
     plt.tight_layout()

@@ -15,7 +15,6 @@ def jwl_pressure(rho, u, E, params):
     params : dict
         Dictionary with keys A, B, R1, R2, omega.
     """
-
     A = float(params.get("A", 1.0))
     B = float(params.get("B", 1.0))
     R1 = float(params.get("R1", 4.0))
