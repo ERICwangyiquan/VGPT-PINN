@@ -91,3 +91,4 @@ def ic_loss(model, xt, true_u):
 def bc_loss(model, xt, true_u):
     pred = model(xt)
     return F.mse_loss(pred, true_u)
+
