@@ -64,22 +64,38 @@ def evaluate(model, cfg, device=None, out_dir="outputs"):
     shock_pos = []
     for j in range(nt):
         r = rho_t[:, j]
-        # Ignore the boundary point at x=0 which can lead to
-        # spurious detections of the shock when the model predicts
-        # a low density at the wall.
-        mask = r[1:] < rho_mid
-        idx = torch.nonzero(mask, as_tuple=False)
+        # find the first interior cell where the density crosses the midpoint
+        above = r >= rho_mid
+        # skip boundary cells to avoid spurious matches at x≈0 or x≈L
+        crossing = above[1:-1] & ~above[2:]
+        idx = torch.nonzero(crossing, as_tuple=False)
         if idx.numel() == 0:
-            shock_pos.append(float("nan"))
+            # fall back to maximum density gradient away from boundaries
+            grad = r[1:] - r[:-1]
+            if grad.numel() < 3:
+                shock_pos.append(float("nan"))
+                continue
+            i = grad[1:-1].abs().argmax().item() + 1
+            shock_pos.append(xs[i].item())
             continue
-        i = idx[0].item() + 1  # offset due to ignoring first point
+        i = idx[0].item() + 2  # crossing occurs between i-1 and i
         x0, x1 = xs[i - 1], xs[i]
         r0, r1 = r[i - 1], r[i]
         if r1 == r0:
-            x = x0
+            # fallback: use interior maximum gradient for a sub-cell estimate
+            grad = r[1:] - r[:-1]
+            if grad.numel() < 3:
+                shock_pos.append(float("nan"))
+            else:
+                i = grad[1:-1].abs().argmax().item() + 1
+                shock_pos.append(xs[i].item())
         else:
             x = x0 + (rho_mid - r0) * (x1 - x0) / (r1 - r0)
-        shock_pos.append(x.item())
+            shock_pos.append(x.item())
+    # enforce non-decreasing shock position
+    for k in range(1, len(shock_pos)):
+        if shock_pos[k] < shock_pos[k - 1]:
+            shock_pos[k] = shock_pos[k - 1]
     shock_x = torch.tensor(shock_pos, dtype=xs.dtype)
     traj = torch.stack([ts, shock_x], dim=1).cpu().numpy()
     np.savetxt(
