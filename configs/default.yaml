@@ -29,6 +29,12 @@ loss:
   w_bc: 1.0
   w_shock: 0.5
   w_rh: 0.5
+  # Scaling factors for residual terms to keep losses in a reasonable range
+  res_scale:
+    mass: 1.0
+    mom: 100000.0
+    energy: 100000000.0
+    lam: 1.0
 
 model:
   mlp_hidden: [128, 128, 128, 128]

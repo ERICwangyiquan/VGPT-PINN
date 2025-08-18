@@ -42,6 +42,14 @@ def euler_residual(model, xt, cfg):
     mom_res = rho_u_t + mom_flux_x
     energy_res = E_t + energy_flux_x - S
     lambda_res = lam_t - rate
+
+       # Optional scaling to non-dimensionalize residuals and stabilize training
+    scales = cfg.get("loss", {}).get("res_scale", {})
+    mass_res = mass_res / scales.get("mass", 1.0)
+    mom_res = mom_res / scales.get("mom", 1.0)
+    energy_res = energy_res / scales.get("energy", 1.0)
+    lambda_res = lambda_res / scales.get("lam", 1.0)
+
     return mass_res, mom_res, energy_res, lambda_res
 
 
