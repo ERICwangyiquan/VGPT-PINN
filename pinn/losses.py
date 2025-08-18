@@ -2,7 +2,7 @@ import torch
 import torch.autograd as autograd
 import torch.nn.functional as F
 
-from .eos_jwl import jwl_pressure
+from .eos_jwl import jwl_pressure, jwl_total_energy
 from .source_terms import arrhenius_rate, energy_source
 from .indicators import shock_indicator
 
@@ -43,7 +43,39 @@ def euler_residual(model, xt, cfg):
     energy_res = E_t + energy_flux_x - S
     lambda_res = lam_t - rate
 
-       # Optional scaling to non-dimensionalize residuals and stabilize training
+    # Apply a simple perfectly matched layer (PML) at the right boundary
+    pml_cfg = cfg.get("pml", {})
+    if pml_cfg.get("enabled", False):
+        L = cfg["geometry"]["L_tot"]
+        x_start = float(pml_cfg.get("x_start", 0.8 * L))
+        sigma_max = float(pml_cfg.get("sigma_max", 50.0))
+        x = xt[:, 0:1]
+        sigma = torch.zeros_like(x)
+        mask = x > x_start
+        if mask.any():
+            xi = (x[mask] - x_start) / (L - x_start + 1e-12)
+            sigma[mask] = sigma_max * xi ** 2
+
+            # Far-field reference state from right IC
+            ic_r = cfg.get("ic", {}).get("right", {})
+            params = cfg.get("physics", {}).get("jwl_params", {})
+            rho_inf = torch.tensor(ic_r.get("rho", 0.0), device=x.device)
+            u_inf = torch.tensor(ic_r.get("u", 0.0), device=x.device)
+            p_inf = torch.tensor(ic_r.get("p", 0.0), device=x.device)
+            E_inf = jwl_total_energy(rho_inf, u_inf, p_inf, params)
+
+            rho_inf = rho_inf.expand_as(rho)
+            u_inf = u_inf.expand_as(u)
+            E_inf = E_inf.expand_as(E)
+            lam_inf = torch.zeros_like(lam)
+            rho_u_inf = rho_inf * u_inf
+
+            mass_res += sigma * (rho - rho_inf)
+            mom_res += sigma * (rho_u - rho_u_inf)
+            energy_res += sigma * (E - E_inf)
+            lambda_res += sigma * (lam - lam_inf)
+
+    # Optional scaling to non-dimensionalize residuals and stabilize training
     scales = cfg.get("loss", {}).get("res_scale", {})
     mass_res = mass_res / scales.get("mass", 1.0)
     mom_res = mom_res / scales.get("mom", 1.0)

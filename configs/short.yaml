@@ -12,10 +12,10 @@ time:
   dt_vis: 0.0005
 
 sampling:
-  N_bc: 200
-  N_ic: 200
-  N_f: 2000
-  N_shock: 500
+  N_bc: 10
+  N_ic: 10
+  N_f: 100
+  N_shock: 20
 
 physics:
   gamma: 1.4
@@ -48,8 +48,8 @@ model:
 train:
   optimizer: adam
   lr: 0.001
-  epochs: 1000
-  save_path: model.pth
+  epochs: 2
+  save_path: tmp_model.pth
 
 evaluation:
   x_obs: 0.5

@@ -1,25 +1,18 @@
-# EGPT-PINN：Entropy-enhanced Generative Pre-Trained Physics Informed Neural Networks for parameterized nonlinear conservation laws
-We propose a Viscosity-enhanced Generative Pre-Trained Physics-Informed Neural Network with a transform layer (VGPT-PINN) for solving parameterized nonlinear conservation laws. The VGPT-PINN extends the traditional physics-informed neural networks and its recently proposed generative pre-trained strategy for linear model reduction to nonlinear model reduction and shock-capturing domains. By utilizing an adaptive meta-network, a simultaneously trained transform layer, viscosity enhancement strategies, implementable shock interaction analysis, and a separable training process, the VGPT-PINN efficiently captures complex parameter-dependent shock formations and interactions.  Numerical results of VGPT-PINN applied to the families of inviscid Burgers' equation and the Euler equations, parameterized by their initial conditions, demonstrate the robustness and accuracy of the proposed technique. It accurately solves for the viscosity solution via very few neurons without leveraging any {\it a priori} knowledge of the equations or its initial condition. 
+# VGPT-PINN
 
-# Paper Links:
+Viscosity-enhanced Generative Pre-Trained Physics-Informed Neural Networks for parameterized nonlinear conservation laws.
+
+## Paper Links
 [arXiv](http://arxiv.org/abs/2501.01587) | [ResearchGate](https://www.researchgate.net/publication/387745006_VGPT-PINN_Viscosity-enhanced_Generative_PreTrained_Physics_Informed_Neural_Networks_for_parameterized_nonlinear_conservation_laws)
 
-# VGPT-PINN Architecture:
+## VGPT-PINN Architecture
 ![image](https://github.com/DuktigYajie/VGPT-PINN/blob/main/VGPT-PINN%20Schematic.png)
 
-# Related Work:
-Transformed Generative Pre-Trained Physics-Informed Neural Networks (TGPT-PINN), a framework that extends Physics-Informed Neural Networks (PINNs) and reduced basis methods (RBM) to the non- linear model reduction regime while maintaining the type of network structure and the unsupervised nature of its learning. 
+## Related Work
+[CMAME: TGPT-PINN: Nonlinear model reduction with transformed GPT-PINNs](https://www.sciencedirect.com/science/article/abs/pii/S0045782524004547)  |
+[YouTube talk](https://www.youtube.com/watch?v=ODA9Po4FVWA)
 
-Paper Links:
-[CMAME:TGPT-PINN: Nonlinear model reduction with transformed GPT-PINNs](https://www.sciencedirect.com/science/article/abs/pii/S0045782524004547)
-
-Talk/Presentation:
-[YouTube](https://www.youtube.com/watch?v=ODA9Po4FVWA)
-
-
-# Citation:
-Below you can find the Bibtex citation:
-
+## Citation
 <blockquote style="border-left: 5px solid #ccc; background-color: #f9f9f9; padding: 10px;">
 @article{chen2024tgpt,<br>
 &nbsp;&nbsp;&nbsp;title={VGPT-PINN: Viscosity-enhanced Generative Pre-Trained Physics Informed Neural Networks for parameterized nonlinear conservation laws},<br>
@@ -29,25 +22,34 @@ Below you can find the Bibtex citation:
 }
 </blockquote>
 
-# Comments：
-Typically, you can directly run the xxx_PINN.ipynb file to generate the full PINN network and save it, then run the xxx_VGPT.ipynb code. If you want to use an existing xxx.pkl file to directly test the VGPT-PINN results, you need to rename the XXX_VGPT_activation.py file to XXX_GPT_activation.py and import XXX_GPT_activation in the XXXX_VGPT.ipynb file. If you have any further questions, feel free to contact me at jiyajie595@sjtu.edu.cn.
+## 1D Explosive Wave PINN
+A minimal physics-informed neural network example for the one-dimensional Euler equations is provided under the `pinn/` and `scripts/` directories. Configuration files in `configs/` specify geometry, sampling, physics parameters and training hyperparameters.
 
-## 1D explosive wave PINN
+### Features
+- JWL equation of state, Arrhenius reaction source term and progress variable \(\lambda\) enforcing energy consistency.
+- Gradient-based shock indicator with losses `L_shock` and `L_RH` plus adaptive resampling for sharper discontinuities.
+- Optional perfectly matched layer (PML) outflow to suppress reflections (`pml.enabled` in the config).
+- Batch training utility for multi-seed experiments and robustness evaluation.
 
-A minimal physics-informed neural network example for the one-dimensional Euler equations is provided under the `pinn/` and `scripts/` directories. The configuration file `configs/default.yaml` specifies geometry, sampling, physics parameters and training hyperparameters.
+### Quick Start
+1. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+2. Train the network (short config runs only two epochs):
+   ```bash
+   python scripts/train.py --config configs/short.yaml
+   ```
+3. Evaluate a trained model:
+   ```bash
+   python scripts/eval.py --config configs/short.yaml --model tmp_model.pth
+   ```
+4. Run multiple seeds and collect results:
+   ```bash
+   python scripts/batch_train.py --config configs/short.yaml --seeds 0 1 --outdir batch_test
+   ```
 
-The M2 milestone integrates a JWL equation of state, Arrhenius reaction source term and a progress variable \(\lambda\) describing explosive burnup. The model now outputs `[rho, u, E, lambda]` and enforces energy consistency through a source term.
+Outputs such as time histories, pressure fields and shock trajectories are written to the `outputs/` directory.
 
-To train the network using the default settings run
-
-```
-python scripts/train.py --config configs/default.yaml
-```
-
-After training, generate a time history at a chosen observation point and a coarse full-field snapshot grid with
-
-```
-python scripts/eval.py --config configs/default.yaml --model model.pth
-```
-
-Outputs are written to the `outputs/` directory.
+## Comments
+Questions or suggestions are welcome at jiyajie595@sjtu.edu.cn.
