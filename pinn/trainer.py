@@ -15,6 +15,7 @@ def train(cfg, device=None):
     opt = torch.optim.Adam(model.parameters(), lr=cfg["train"]["lr"])
     epochs = cfg["train"]["epochs"]
 
+    final_loss = None
     for ep in range(epochs):
         opt.zero_grad()
         loss_pde = pde_loss(model, data["f_xt"], cfg)
@@ -38,9 +39,10 @@ def train(cfg, device=None):
         )
         loss.backward()
         opt.step()
+        final_loss = loss.item()
         if (ep + 1) % 100 == 0:
-            print(f"Epoch {ep+1}/{epochs}: loss={loss.item():.4e}")
+            print(f"Epoch {ep+1}/{epochs}: loss={final_loss:.4e}")
     save_path = cfg["train"].get("save_path")
     if save_path:
         torch.save(model.state_dict(), save_path)
-    return model
+    return model, final_loss
